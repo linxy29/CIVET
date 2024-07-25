@@ -1,0 +1,10 @@
+name: civet
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - pandas
+  - scipy
+  - statsmodels
+

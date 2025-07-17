@@ -10,7 +10,7 @@ output:
     theme: flatly
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, echo=FALSE, results='hide'}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
@@ -84,7 +84,8 @@ results <- civet(
   AD_mat = matrices$AD,
   DP_mat = matrices$DP,
   clone_mat = clone_assignments,
-  minDP =20 use_random_effect = FALSE
+  minDP = 20,
+  use_random_effect = FALSE
 )
 ```
 
@@ -127,14 +128,14 @@ example_data/
 
 ```{r file_paths, eval=FALSE}
 # Set your base directory
-subrun_dir <-example_data"
+subrun_dir <- "example_data"
 
 # Define file paths
-metadata_csv <- file.path(subrun_dir, "metadata",simulation_cell_metadata.csv)
-ad_mtx_path  <- file.path(subrun_dir, cellSNP,cellSNP.tag.AD.mtx)
-dp_mtx_path  <- file.path(subrun_dir, cellSNP,cellSNP.tag.DP.mtx)
-barcodes_txt <- file.path(subrun_dir, cellSNP",cellSNP.tag.barcodes.txt")
-mutations_txt <- file.path(subrun_dir, cellSNP", "cellSNP.tag.mutations.txt")
+metadata_csv <- file.path(subrun_dir, "metadata", "simulation_cell_metadata.csv")
+ad_mtx_path  <- file.path(subrun_dir, "cellSNP", "cellSNP.tag.AD.mtx")
+dp_mtx_path  <- file.path(subrun_dir, "cellSNP", "cellSNP.tag.DP.mtx")
+barcodes_txt <- file.path(subrun_dir, "cellSNP", "cellSNP.tag.barcodes.txt")
+mutations_txt <- file.path(subrun_dir, "cellSNP", "cellSNP.tag.mutations.txt")
 ```
 
 #### 2.2 Check Required Files
@@ -266,13 +267,13 @@ cat("Analysis completed! Results saved to:", outdir, "\n")
 # Load saved results
 results <- readRDS("example_data/civet_res/civet_results.rds")
 
-# View significant variants (FDR <00.05)
-significant_variants <- which(results$LRT_fdr < 0000.5, arr.ind = TRUE)
+# View significant variants (FDR < 0.05)
+significant_variants <- which(results$LRT_fdr < 0.05, arr.ind = TRUE)
 print(significant_variants)
 
 # Extract p-values for specific clone
 clone1_pvals <- results$LRT_pvals[,1]
-significant_clone1 <- names(clone1_pvals)clone1vals <000.5 & !is.na(clone1_pvals)]
+significant_clone1 <- names(clone1_pvals)[clone1_pvals < 0.05 & !is.na(clone1_pvals)]
 ```
 
 ## Key Features

@@ -121,7 +121,8 @@ CheckDf <- function(df) {
   return(FALSE)  # If none of the conditions are met, proceed
 }
 
-civet <- function(AD_mat = NULL, DP_mat = NULL, clone_mat = NULL, minDP = 20, use_random_effect = FALSE) {
+civet <- function(AD_mat = NULL, DP_mat = NULL, clone_mat = NULL, minDP = 20, 
+                  use_random_effect = FALSE, base_model = NULL) {
   # Ensure all matrices have proper row and column names
   if (is.null(rownames(AD_mat))) 
     rownames(AD_mat) <- paste0("variant_", seq_len(nrow(AD_mat)))
@@ -136,6 +137,11 @@ civet <- function(AD_mat = NULL, DP_mat = NULL, clone_mat = NULL, minDP = 20, us
   }
   if (!all(rownames(AD_mat) == rownames(DP_mat))) {
     stop("Variants in AD and DP matrices are not identical.")
+  }
+  
+  # Validate base_model parameter
+  if (!is.null(base_model) && !(base_model %in% c("null", "full"))) {
+    stop("base_model must be NULL, 'null', or 'full'")
   }
   
   # Initialize result matrices with NA values
@@ -169,15 +175,33 @@ civet <- function(AD_mat = NULL, DP_mat = NULL, clone_mat = NULL, minDP = 20, us
       # Check dataframe conditions
       if (CheckDf(df_tmp)) next
       
+      # Build formulas based on base_model parameter
+      if (is.null(base_model) || base_model == "null") {
+        # Original behavior: null model is intercept only
+        formula_fm0 <- as.formula("cbind(n1, ref_count) ~ 1")
+        formula_fm1 <- as.formula(paste0("cbind(n1, ref_count) ~ 1 + ", colnames(clone_mat)[c]))
+      } else if (base_model == "full") {
+        # Full model: test adding current covariate to model with all other covariates
+        other_cols <- setdiff(seq_len(n_clones), c)
+        if (length(other_cols) > 0) {
+          other_predictors <- paste(colnames(clone_mat)[other_cols], collapse = " + ")
+          formula_fm0 <- as.formula(paste0("cbind(n1, ref_count) ~ 1 + ", other_predictors))
+          all_predictors <- paste(colnames(clone_mat), collapse = " + ")
+          formula_fm1 <- as.formula(paste0("cbind(n1, ref_count) ~ 1 + ", all_predictors))
+        } else {
+          # If only one covariate, fall back to null vs single covariate
+          formula_fm0 <- as.formula("cbind(n1, ref_count) ~ 1")
+          formula_fm1 <- as.formula(paste0("cbind(n1, ref_count) ~ 1 + ", colnames(clone_mat)[c]))
+        }
+      }
+      
       # Fit null model
-      formula_fm0 <- as.formula("cbind(n1, ref_count) ~ 1")
       fm0 <- tryCatch(aod::betabin(formula_fm0, ~1, data = df_tmp, warnings = FALSE),
                       error = function(e) NULL)
       if (is.null(fm0)) next
       
       # Fit alternative model
       if (!use_random_effect) {
-        formula_fm1 <- as.formula(paste0("cbind(n1, ref_count) ~ 1 + ", colnames(clone_mat)[c]))
         fm1 <- tryCatch(aod::betabin(formula_fm1, ~1, data = df_tmp, warnings = FALSE),
                         error = function(e) NULL)
         if (is.null(fm1)) next
@@ -213,8 +237,8 @@ civet <- function(AD_mat = NULL, DP_mat = NULL, clone_mat = NULL, minDP = 20, us
     
     # Store likelihood ratio values
     result_matrices$LR_vals[, c] <- sub_LR_val
-  }
-  
+  } 
+
   # Adjust p-values for multiple testing
   result_matrices$LRT_fdr[] <- p.adjust(result_matrices$LRT_pvals, method = "fdr")
   
